@@ -6,39 +6,38 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import it.polito.tdp.food.model.Condiment;
 import it.polito.tdp.food.model.Food;
 import it.polito.tdp.food.model.Portion;
 
 public class FoodDao {
-	public List<Food> listAllFoods(){
+	public void listAllFoods(Map<Integer, Food> idMap){
 		String sql = "SELECT * FROM food" ;
 		try {
 			Connection conn = DBConnect.getConnection() ;
 
 			PreparedStatement st = conn.prepareStatement(sql) ;
 			
-			List<Food> list = new ArrayList<>() ;
 			
 			ResultSet res = st.executeQuery() ;
 			
 			while(res.next()) {
 				try {
-					list.add(new Food(res.getInt("food_code"),
-							res.getString("display_name")
-							));
+					if(!idMap.containsKey(res.getInt("food_code"))) {
+						Food f = new Food(res.getInt("food_code"), res.getString("display_name"));
+						idMap.put(f.getFood_code(), f);
+					}
 				} catch (Throwable t) {
 					t.printStackTrace();
 				}
 			}
 			
 			conn.close();
-			return list ;
 
 		} catch (SQLException e) {
 			e.printStackTrace();
-			return null ;
 		}
 
 	}
@@ -108,5 +107,41 @@ public class FoodDao {
 			return null ;
 		}
 
+	}
+
+	public List<Food> getAllVertici(Map<Integer, Food> idMap, int nPorzioni) {
+		String sql = "SELECT f.food_code AS id, COUNT(p.portion_id) AS p "
+				+ "FROM food f, `portion` p "
+				+ "WHERE f.food_code = p.food_code "
+				+ "GROUP BY id "
+				+ "HAVING COUNT(p.portion_id) <= ?" ;
+		try {
+			Connection conn = DBConnect.getConnection() ;
+
+			PreparedStatement st = conn.prepareStatement(sql) ;
+			
+			st.setInt(1, nPorzioni);
+			
+			List<Food> list = new ArrayList<>() ;
+			
+			ResultSet res = st.executeQuery() ;
+			
+			while(res.next()) {
+				try {
+					Food f = idMap.get(res.getInt("id"));
+					list.add(f);
+				} catch (Throwable t) {
+					t.printStackTrace();
+				}
+			}
+			
+			conn.close();
+			return list ;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return null ;
+		}
+		
 	}
 }
